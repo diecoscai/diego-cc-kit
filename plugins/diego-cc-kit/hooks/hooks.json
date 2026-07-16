@@ -1,0 +1,61 @@
+{
+  "description": "Diego's safety + lifecycle hooks: bash validation, post-edit style check, session snapshots, and git worktree create/remove.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/bash-validator.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/style-check.sh"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/mcp-snapshot.sh"
+          },
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/session-context.sh"
+          }
+        ]
+      }
+    ],
+    "WorktreeCreate": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "payload=$(cat); b=$(echo \"$payload\" | jq -r '.branch_name // .branch // .ref // empty'); w=$(echo \"$payload\" | jq -r '.worktree_path // .path // empty'); if [ -z \"$b\" ] || [ -z \"$w\" ]; then echo 'missing branch or path in WorktreeCreate payload' >&2; exit 1; fi; root=$(git rev-parse --show-toplevel 2>/dev/null); if [ -z \"$root\" ]; then echo \"WorktreeCreate: cwd $(pwd) is not a git repo\" >&2; exit 1; fi; cd \"$root\" && git worktree add -b \"$b\" \"$w\""
+          }
+        ]
+      }
+    ],
+    "WorktreeRemove": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "payload=$(cat); w=$(echo \"$payload\" | jq -r '.worktree_path // .path // empty'); [ -z \"$w\" ] && exit 1; root=$(git rev-parse --show-toplevel 2>/dev/null); [ -z \"$root\" ] && exit 1; cd \"$root\" && (git worktree remove --force \"$w\" 2>/dev/null || rm -rf \"$w\")"
+          }
+        ]
+      }
+    ]
+  }
+}

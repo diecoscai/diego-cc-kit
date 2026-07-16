@@ -1,0 +1,9 @@
+{
+  "name": "capture-evidence",
+  "private": true,
+  "type": "module",
+  "description": "Self-contained deps for the capture-evidence skill (run `npm install` here once, or run flows with CWD set to a repo that already has playwright).",
+  "dependencies": {
+    "playwright": "^1.59.0"
+  }
+}

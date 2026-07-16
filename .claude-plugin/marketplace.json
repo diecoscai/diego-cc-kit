@@ -1,0 +1,47 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "diego-cc-kit",
+  "description": "Diego's personal Claude Code kit — orchestration agents, verification, and safety hooks.",
+  "owner": {
+    "name": "Diego Scai",
+    "email": "diecoscai@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "diego-cc-kit",
+      "description": "Personal orchestration kit: 6 sub-agents, triage/implement/orchestrate/verify/codegraph-usage skills, and safety hooks (bash-validator, style-check, session snapshots, worktree lifecycle).",
+      "version": "0.1.3",
+      "author": {
+        "name": "Diego Scai",
+        "email": "diecoscai@gmail.com"
+      },
+      "source": "./plugins/diego-cc-kit",
+      "category": "development",
+      "tags": [
+        "orchestration",
+        "agents",
+        "verification",
+        "hooks",
+        "codegraph"
+      ]
+    },
+    {
+      "name": "evidence-kit",
+      "description": "PR/issue evidence pipeline: capture-evidence (Playwright video/screenshots of a local web app) + github-evidence (inline embed via user-attachments upload).",
+      "version": "0.1.0",
+      "author": {
+        "name": "Diego Scai",
+        "email": "diecoscai@gmail.com"
+      },
+      "source": "./plugins/evidence-kit",
+      "category": "development",
+      "tags": [
+        "evidence",
+        "screenshots",
+        "video",
+        "playwright",
+        "github"
+      ]
+    }
+  ]
+}

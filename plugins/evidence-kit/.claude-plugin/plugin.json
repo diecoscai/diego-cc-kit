@@ -1,0 +1,11 @@
+{
+  "name": "evidence-kit",
+  "version": "0.1.0",
+  "description": "PR/issue evidence pipeline: capture local web-UI video/screenshots (Playwright) and embed them inline in GitHub via user-attachments URLs.",
+  "author": {
+    "name": "Diego Scai",
+    "email": "diecoscai@gmail.com"
+  },
+  "license": "MIT",
+  "keywords": ["evidence", "screenshots", "video", "playwright", "github", "pr"]
+}
