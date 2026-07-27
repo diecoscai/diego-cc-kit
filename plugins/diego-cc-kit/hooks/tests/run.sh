@@ -51,4 +51,102 @@ status=$?
 
 rm -rf "$tmp_repo" "$wt_new" "$wt_existing"
 
+# --- test-guard (Edit mode reads the real on-disk file, so fixtures live here) ---
+tg_dir=$(mktemp -d)
+
+# --- test-guard: blocks a dropped expect() on Edit ---
+printf 'it("a", () => {\n  expect(a).toBe(1); expect(b).toBe(2);\n});\n' > "$tg_dir/drop.test.ts"
+payload=$(printf '{"tool_name":"Edit","cwd":"%s","tool_input":{"file_path":"drop.test.ts","old_string":"expect(a).toBe(1); expect(b).toBe(2);","new_string":"expect(a).toBe(1);"}}' "$tg_dir")
+out=$(echo "$payload" | "$hooks_dir/test-guard.sh" 2>&1)
+status=$?
+[ "$status" -eq 2 ] && pass "test-guard blocks a dropped expect() on Edit" \
+    || fail "test-guard should exit 2 on a dropped expect() (got $status): $out"
+
+# --- test-guard: blocks a newly-added .only( on Edit ---
+printf 'it("works", () => {});\n' > "$tg_dir/only.test.ts"
+payload=$(printf '{"tool_name":"Edit","cwd":"%s","tool_input":{"file_path":"only.test.ts","old_string":"it(\\"works\\", () => {});","new_string":"it.only(\\"works\\", () => {});"}}' "$tg_dir")
+out=$(echo "$payload" | "$hooks_dir/test-guard.sh" 2>&1)
+status=$?
+[ "$status" -eq 2 ] && pass "test-guard blocks a newly-added .only(" \
+    || fail "test-guard should exit 2 on a newly-added .only( (got $status): $out"
+
+# --- test-guard: allows moving an expect() within the file (file-wide count
+#     unchanged) — the chunk-only diff used to false-positive on this ---
+printf 'function helper() { return 1; }\nit("a", () => {\n  const x = helper();\n  expect(x).toBe(1);\n});\n' > "$tg_dir/move.test.ts"
+move_old='it("a", () => {
+  const x = helper();
+  expect(x).toBe(1);
+});'
+move_new='function assertOne(x) { expect(x).toBe(1); }
+it("a", () => {
+  const x = helper();
+  assertOne(x);
+});'
+payload=$(python3 -c 'import json,sys; print(json.dumps({"tool_name":"Edit","cwd":sys.argv[1],"tool_input":{"file_path":"move.test.ts","old_string":sys.argv[2],"new_string":sys.argv[3]}}))' \
+    "$tg_dir" "$move_old" "$move_new")
+out=$(echo "$payload" | "$hooks_dir/test-guard.sh" 2>&1)
+status=$?
+[ "$status" -eq 0 ] && pass "test-guard allows moving an expect() within the file" \
+    || fail "test-guard should exit 0 when an expect() moves within the file (got $status): $out"
+
+# --- test-guard: still blocks a genuine file-wide expect() deletion on Edit ---
+printf 'it("a", () => {\n  expect(1).toBe(1);\n  expect(2).toBe(2);\n});\n' > "$tg_dir/delete.test.ts"
+del_old='it("a", () => {
+  expect(1).toBe(1);
+  expect(2).toBe(2);
+});'
+del_new='it("a", () => {
+  expect(1).toBe(1);
+});'
+payload=$(python3 -c 'import json,sys; print(json.dumps({"tool_name":"Edit","cwd":sys.argv[1],"tool_input":{"file_path":"delete.test.ts","old_string":sys.argv[2],"new_string":sys.argv[3]}}))' \
+    "$tg_dir" "$del_old" "$del_new")
+out=$(echo "$payload" | "$hooks_dir/test-guard.sh" 2>&1)
+status=$?
+[ "$status" -eq 2 ] && pass "test-guard blocks a genuine file-wide expect() deletion" \
+    || fail "test-guard should exit 2 on a genuine file-wide deletion (got $status): $out"
+
+# --- test-guard: always allows a brand-new test file Write ---
+out=$(printf '{"tool_name":"Write","cwd":"%s","tool_input":{"file_path":"new.test.ts","content":"it.skip(\\"x\\", () => {});"}}' "$tg_dir" \
+    | "$hooks_dir/test-guard.sh" 2>&1)
+status=$?
+[ "$status" -eq 0 ] && pass "test-guard allows Write to a brand-new test file" \
+    || fail "test-guard should exit 0 on a new test file Write (got $status): $out"
+
+# --- test-guard: escape hatch allows an otherwise-blocked edit ---
+out=$(echo '{"tool_name":"Edit","tool_input":{"file_path":"src/foo.test.ts","old_string":"expect(a).toBe(1); expect(b).toBe(2);","new_string":"expect(a).toBe(1);"}}' \
+    | CCKIT_ALLOW_TEST_EDITS=1 "$hooks_dir/test-guard.sh" 2>&1)
+status=$?
+[ "$status" -eq 0 ] && pass "test-guard escape hatch (CCKIT_ALLOW_TEST_EDITS=1) allows the edit" \
+    || fail "test-guard escape hatch should exit 0 (got $status): $out"
+
+rm -rf "$tg_dir"
+
+# --- handoff-gate: a complete PROGRESS.md passes ---
+hg_dir=$(mktemp -d)
+cat > "$hg_dir/PROGRESS.md" <<'EOF'
+## Step 1: First
+status: done
+- [x] done thing
+
+## Step 2: Second
+status: done
+- [x] done thing
+EOF
+out=$("$hooks_dir/../scripts/handoff-gate.sh" "$hg_dir/PROGRESS.md" 2>&1)
+status=$?
+[ "$status" -eq 0 ] && pass "handoff-gate passes a complete PROGRESS.md" \
+    || fail "handoff-gate should exit 0 on a complete PROGRESS.md (got $status): $out"
+
+# --- handoff-gate: an incomplete PROGRESS.md fails ---
+cat > "$hg_dir/PROGRESS-incomplete.md" <<'EOF'
+## Step 1: First
+status: done
+- [ ] not done yet
+EOF
+out=$("$hooks_dir/../scripts/handoff-gate.sh" "$hg_dir/PROGRESS-incomplete.md" 2>&1)
+status=$?
+[ "$status" -eq 1 ] && pass "handoff-gate fails an incomplete PROGRESS.md" \
+    || fail "handoff-gate should exit 1 on an incomplete PROGRESS.md (got $status): $out"
+rm -rf "$hg_dir"
+
 exit $failed

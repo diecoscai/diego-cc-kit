@@ -1,5 +1,5 @@
 {
-  "description": "Diego's safety + lifecycle hooks: bash validation, post-edit style check, session snapshots, and git worktree create/remove.",
+  "description": "Diego's safety + lifecycle hooks: bash validation, secret/test-weakening guards, post-edit style check, session snapshots, and git worktree create/remove.",
   "hooks": {
     "PreToolUse": [
       {
@@ -17,6 +17,10 @@
           {
             "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/secret-guard.sh"
+          },
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/test-guard.sh"
           }
         ]
       }

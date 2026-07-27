@@ -8,6 +8,7 @@ description: Use after implementation work to verify it with a fresh-context age
 After implementation agents finish, spawn a separate verification agent:
 - Fresh context — zero knowledge of how work was done
 - Check order: automated (tests, lint, type-check) → functional (does it work?) → quality (follows patterns?)
+- If the repo has `.claude/arch.yml`, also run `"${CLAUDE_PLUGIN_ROOT}"/scripts/dae_arch.py --full`: nonzero is an automatic finding.
 - Report format:
   ```
   ## Verification: [task]
