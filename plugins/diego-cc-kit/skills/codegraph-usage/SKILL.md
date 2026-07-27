@@ -26,7 +26,7 @@ Use codegraph for **structural** questions — what calls what, what would break
 - **Trust codegraph results.** They come from a full AST parse. Do NOT re-verify them with grep.
 - **Don't grep first** when looking up a symbol by name. `codegraph_search` is faster and returns kind + location + signature in one call.
 - **Don't chain `codegraph_search` + `codegraph_node`** when you just want context — `codegraph_context` is one call.
-- **`codegraph_explore` is the heavy hitter** for unfamiliar areas — returns full source from all relevant files in one call, but is token-heavy. Spawn a subagent for explore-class questions to keep main context clean.
+- **`codegraph_explore` is the heavy hitter** for unfamiliar areas — returns full source from all relevant files in one call, but is token-heavy. Spawn a subagent for explore-class questions to keep main context clean — with an explicit model (sonnet for explore/synthesis, haiku for plain lookups; never inherit the session model).
 - **Index lag**: the file watcher debounces ~500ms behind writes; don't re-query immediately after editing a file in the same turn.
 
 ## If `.codegraph/` doesn't exist

@@ -2,6 +2,7 @@
 name: implementer
 description: General-purpose implementation agent. Spawned by orchestrator to write code in an assigned worktree or scope.
 model: sonnet
+effort: medium
 color: yellow
 ---
 
