@@ -47,7 +47,7 @@ Choose the cheapest model that handles the task:
 **Cost as a lazy-router check.** If opus/fable spend climbs without the tasks actually getting harder, the router went lazy — check `/usage` (per-model breakdown) and re-justify each expensive spawn. A growing main-model bar means the orchestrator is executing instead of delegating. Over-routing is the default failure, not under-routing.
 
 ## Git Worktree Rules
-When using agent teams for parallel work, each task gets an isolated worktree:
+**Any sub-agent that writes files gets its own worktree — never spawn a writer into the shared checkout.** A writer in the shared checkout can switch branches or dirty the tree under the main session (and under other live sessions). Read-only agents (researcher, verifier) may share the checkout.
 ```bash
 git worktree add ../wt-GH-<number>-<slug> -b feat/GH-<number>-<slug>
 ```
