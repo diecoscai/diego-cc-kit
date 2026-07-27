@@ -17,6 +17,7 @@ There are no code-neutral exceptions: no "prep work", no "just the tests", no "I
 
 ## Phase 1 — validate the plan (before touching code)
 
+- Resuming mid-plan: run `"${CLAUDE_PLUGIN_ROOT}"/scripts/handoff-gate.sh <plan-dir>/PROGRESS.md --through <last-completed-step>`. Nonzero means the previous session's completion claims don't hold — stop and reconcile PROGRESS.md against the actual code before continuing.
 - Is every acceptance-checklist box verifiable (a command or an observable behavior)?
 - Does every verification-gate command actually exist (check its named source)? A plan citing an invented command gets corrected here, not discovered mid-loop.
 - Are the plan's claims still true on the current base branch? Plans go stale like issues do.

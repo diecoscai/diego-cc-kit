@@ -25,6 +25,9 @@ stop, not a PASS.
 4. **L4 Adversarial + evidence** — try to refute the implementer's claims; UI changes require
    runtime evidence, not static review alone.
 
+If the repo has `.claude/arch.yml`, also run `"${CLAUDE_PLUGIN_ROOT}"/scripts/dae_arch.py --full`:
+nonzero is an automatic finding.
+
 PASS → ready for commit. PARTIAL → human decides. FAIL → retry with failure context.
 
 ## Steering loop
