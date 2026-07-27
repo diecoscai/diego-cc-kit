@@ -1,58 +1,50 @@
 #!/bin/bash
-# Style Check Hook - Warns about code issues after writing
+# Style Check Hook - informational only (never blocks; secrets are blocked
+# separately by the PreToolUse secret-guard.sh)
 # Receives JSON via stdin, outputs warnings to stderr
-# Exit 0 = Allow (always), just provides warnings
+# Exit 0 = Allow (always)
 
 input=$(cat)
 file_path=$(echo "$input" | jq -r '.tool_input.file_path // empty')
 content=$(echo "$input" | jq -r '.tool_input.content // .tool_input.new_string // empty')
 
-# If no file path, skip
-if [ -z "$file_path" ]; then
-    exit 0
-fi
+[ -z "$file_path" ] && exit 0
 
-# Only check JS/TS files
-if ! echo "$file_path" | grep -qE '\.(js|jsx|ts|tsx)$'; then
-    exit 0
-fi
+# Only check code files
+echo "$file_path" | grep -qE '\.(js|jsx|ts|tsx|py)$' || exit 0
 
-warnings=""
+repo_root=$(git -C "$(dirname "$file_path")" rev-parse --show-toplevel 2>/dev/null)
 
-# Check for console.log
-if echo "$content" | grep -qE 'console\.(log|debug|info)\('; then
-    warnings="${warnings}⚠️  console.log/debug/info found - remember to remove before commit\n"
-fi
-
-# Check for debugger statements
-if echo "$content" | grep -q 'debugger'; then
-    warnings="${warnings}⚠️  debugger statement found - remember to remove\n"
-fi
-
-# Check for TODO/FIXME
-if echo "$content" | grep -qiE '(TODO|FIXME|XXX|HACK):'; then
-    warnings="${warnings}📝 TODO/FIXME comment found - track this\n"
-fi
-
-# Check for hardcoded secrets (simple patterns)
-if echo "$content" | grep -qE "(api_key|apikey|secret|password)\s*[:=]\s*['\"][^'\"]+['\"]"; then
-    warnings="${warnings}🚨 POSSIBLE HARDCODED SECRET - review carefully!\n"
-fi
-
-# Check for 'any' type in TypeScript
-if echo "$file_path" | grep -qE '\.tsx?$'; then
-    if echo "$content" | grep -qE ':\s*any\b|as\s+any\b'; then
-        warnings="${warnings}📝 'any' type used - consider adding proper types\n"
+ran_eslint=0
+if [ -n "$repo_root" ] && echo "$file_path" | grep -qE '\.(js|jsx|ts|tsx)$' \
+   && [ -x "$repo_root/node_modules/.bin/eslint" ] \
+   && { ls "$repo_root"/eslint.config.* >/dev/null 2>&1 || ls -A "$repo_root"/.eslintrc* >/dev/null 2>&1; }; then
+    eslint_out=$(cd "$repo_root" && timeout 15 npx --no-install eslint --no-warn-ignored --format stylish "$file_path" 2>&1)
+    eslint_status=$?
+    if [ "$eslint_status" -ne 124 ]; then
+        ran_eslint=1
+        if [ -n "$eslint_out" ]; then
+            echo "" >&2
+            echo "=== ESLint found issues in $file_path - fix them before continuing ===" >&2
+            echo "$eslint_out" >&2
+        fi
     fi
 fi
 
-# Output warnings if any found
-if [ -n "$warnings" ]; then
-    echo "" >&2
-    echo "=== Style Check Warnings ===" >&2
-    echo -e "$warnings" >&2
-    echo "These are warnings only - no action blocked." >&2
+if [ "$ran_eslint" -eq 0 ]; then
+    warnings=""
+    if echo "$content" | grep -qE 'console\.(log|debug|info)\('; then
+        warnings="${warnings}⚠️  console.log/debug/info found - remember to remove before commit\n"
+    fi
+    if echo "$content" | grep -q 'debugger'; then
+        warnings="${warnings}⚠️  debugger statement found - remember to remove\n"
+    fi
+    if [ -n "$warnings" ]; then
+        echo "" >&2
+        echo "=== Style Check Warnings ===" >&2
+        echo -e "$warnings" >&2
+        echo "These are warnings only - no action blocked." >&2
+    fi
 fi
 
-# Always exit 0 - this hook warns but doesn't block
 exit 0
