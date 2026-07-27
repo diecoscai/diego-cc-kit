@@ -28,6 +28,8 @@ Gaps → fix the plan file, log the correction in `PROGRESS.md`, then execute th
 
 ## Phase 2 — execute (the loop)
 
+Execution is delegated: spawn `implementer` (or `fullstack-integrator` for cross-stack wiring) with an explicit `model` — sonnet by default, opus for a genuinely hard step (see `orchestrate`'s routing). Never let the spawn inherit the session model.
+
 For each plan step:
 1. Implement that step only.
 2. Run the plan's verification gate.
@@ -37,7 +39,7 @@ For each plan step:
 
 ## Phase 3 — independent verification (never self-verify)
 
-After the last step, get a fresh-context PASS before opening the PR: a verifier agent that did not write the code checks the diff against the plan's acceptance checklist and re-runs the gate (use the `verify` skill's PASS/PARTIAL/FAIL protocol). PARTIAL/FAIL → back to Phase 2. The implementer's own test run is evidence, not a verdict.
+After the last step, get a fresh-context PASS before opening the PR: a verifier agent that did not write the code checks the diff against the plan's acceptance checklist through the full L1–L4 protocol in `agents/verifier.md` (gate re-run, exceptions audit, red-proof on new tests, adversarial + evidence review), per the `verify` skill's PASS/PARTIAL/FAIL format. PARTIAL/FAIL → back to Phase 2. The implementer's own test run is evidence, not a verdict.
 
 ## Phase 4 — the PR
 
