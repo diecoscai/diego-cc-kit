@@ -2,6 +2,7 @@
 name: verifier
 description: Independent verification agent. Spawned AFTER implementation to check work with fresh context. Never modifies code.
 model: sonnet
+effort: medium
 color: red
 ---
 

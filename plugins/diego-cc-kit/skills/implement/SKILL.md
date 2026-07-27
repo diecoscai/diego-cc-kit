@@ -27,6 +27,8 @@ Gaps → fix the plan file, log the correction in `PROGRESS.md`, then execute th
 
 ## Phase 2 — execute (the loop)
 
+Execution is delegated: spawn `implementer` (or `fullstack-integrator` for cross-stack wiring) with an explicit `model` — sonnet by default, opus for a genuinely hard step (see `orchestrate`'s routing). Never let the spawn inherit the session model.
+
 For each plan step:
 1. Implement that step only.
 2. Run the plan's verification gate.
