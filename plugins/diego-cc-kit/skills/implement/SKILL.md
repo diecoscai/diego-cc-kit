@@ -36,7 +36,7 @@ For each plan step:
 
 ## Phase 3 — independent verification (never self-verify)
 
-After the last step, get a fresh-context PASS before opening the PR: a verifier agent that did not write the code checks the diff against the plan's acceptance checklist and re-runs the gate (use the `verify` skill's PASS/PARTIAL/FAIL protocol). PARTIAL/FAIL → back to Phase 2. The implementer's own test run is evidence, not a verdict.
+After the last step, get a fresh-context PASS before opening the PR: a verifier agent that did not write the code checks the diff against the plan's acceptance checklist through the full L1–L4 protocol in `agents/verifier.md` (gate re-run, exceptions audit, red-proof on new tests, adversarial + evidence review), per the `verify` skill's PASS/PARTIAL/FAIL format. PARTIAL/FAIL → back to Phase 2. The implementer's own test run is evidence, not a verdict.
 
 ## Phase 4 — the PR
 
