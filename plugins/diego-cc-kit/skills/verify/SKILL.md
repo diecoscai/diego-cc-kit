@@ -1,13 +1,26 @@
 ---
 name: verify
-description: Use after implementation work to verify it with a fresh-context agent — never self-verify. Defines the check order and the PASS/PARTIAL/FAIL report format with evidence.
+description: Use when a diff written by a DIFFERENT agent has to be trusted — before a PR, a merge, or accepting a sub-agent's work. Defines the check order and the PASS/PARTIAL/FAIL report format with evidence. Not for work you did yourself in-session.
 ---
 
 # Verification Protocol
 
-After implementation agents finish, spawn a separate `verifier` sub-agent (fresh context,
-read-only). The full protocol — including the exact report format — lives in
-`agents/verifier.md`; this skill only summarizes when/why.
+## When this applies
+
+Spawn a `verifier` sub-agent (fresh context, read-only) when there is a real trust boundary:
+
+- the diff was written by a **different agent** than the one deciding it's done, or
+- the change is about to become a **PR, a merge to main, or a release**.
+
+## When it does not
+
+Work the main session wrote itself, in-session, gets **no verification step**. Run the
+project's gate once as part of doing the work and report the result — do not re-run it, do
+not adversarially re-review your own diff, and do not spawn an agent to check you. That
+is not rigor; it is the same check twice.
+
+The full protocol — including the exact report format — lives in `agents/verifier.md`;
+this skill only summarizes when/why.
 
 ## Independence check (mechanical, not vibes)
 
@@ -15,15 +28,24 @@ The verifier's `agent_id` must differ from the implementer's — record both in 
 An agent verifying its own diff is not verification; if the ids match, that's an automatic
 stop, not a PASS.
 
-## The four layers (cheapest first — see `agents/verifier.md` for the full protocol)
+## The layers
 
-1. **L1 Gate re-run** — confirms the implementer's report matches reality; not a verdict on its own.
+Every layer here exists to test a claim made by someone else. None of them is a second
+opinion on your own work.
+
+**Always, across the boundary:**
+
+1. **L1 Gate re-run** — the implementer's "tests pass" is text until you run the gate. One
+   command; it is the only thing that catches a report that doesn't match the tree.
 2. **L2 Exceptions audit** — the highest-signal layer: hunts self-granted exceptions in the diff
    (disabled lint/type checks, skipped/removed tests, edits to guard files).
 3. **L3 Red-proof** — a new test only counts if it fails without the implementation
    (`scripts/red-proof.sh`); property tests also need one manual mutation to confirm they can fail.
-4. **L4 Adversarial + evidence** — try to refute the implementer's claims; UI changes require
-   runtime evidence, not static review alone.
+
+**L4 Adversarial + evidence — only when the change carries risk L1–L3 can't see:**
+auth/permissions, multi-tenancy scoping, money, data migrations, deletion paths, or a UI
+change whose behavior static review cannot observe (then runtime evidence is required, not
+optional). On an ordinary diff that cleared L1–L3, skip L4 and say so in the report.
 
 If the repo has `.claude/arch.yml`, also run `"${CLAUDE_PLUGIN_ROOT}"/scripts/dae_arch.py --full`:
 nonzero is an automatic finding.
