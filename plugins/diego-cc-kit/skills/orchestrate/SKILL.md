@@ -6,45 +6,119 @@ description: Use when deciding how to delegate work across sub-agents — choosi
 # Agent Team Orchestration
 
 ## Delegation Decision
-- **Self-handle** (< 30 seconds): quick fix, one-liner, status check, single file read/grep
-- **1 subagent** (Agent tool): single focused task — implementation, research, test writing
-- **2-3 parallel subagents** (Agent tool, single message): independent tasks that don't share files
-- **Agent team** (TeamCreate): 4+ parallel tickets needing worktree isolation and coordination
 
-First instinct on any task: "Who handles this?" Default to delegation unless trivially fast.
+Default is **self-handle**. Delegation is the exception you justify, not the reflex.
+
+Run both gates in order. Delegate only if BOTH pass:
+
+**Gate 1 — Size.** Can you finish it yourself in roughly ten tool calls or fewer?
+Yes → do it yourself. No exceptions for "but an agent could do it in parallel";
+spawning costs more wall-clock than ten reads.
+
+**Gate 2 — Independence.** Do the tracks touch disjoint file sets, share no state, and
+have no ordering between them? If any track needs another's output, or two would edit the
+same file, it is one track — hand it to one agent, or do it yourself.
+
+Both gates pass → **one** agent. Only split into several when the tracks are so large
+that one agent would run out of room, not because splitting "feels parallel".
+
+**Caps (hard):**
+- Max **3** concurrent subagents. Reaching 3 is a signal to re-check Gate 2, not a target.
+- **4+ agents / TeamCreate**: only for pre-planned worktree-isolated tickets, and only
+  when the user asked for a team or approved a plan that names one. Never spun up on your
+  own initiative.
+- Never spawn an agent to verify, double-check, or re-read work you just did yourself.
+- Never spawn an agent for a single file read, grep, status check, or one-line fix.
+
+**Never delegate:** git operations, PR creation, GitHub issue updates, final integration,
+the decision of what to delegate.
 
 ## Responsibility Split
 - **Main session**: task decomposition, git operations (commit, push, PR), GitHub issue updates, final integration, verification coordination
 - **Sub-agents**: codebase exploration, implementation, test writing, documentation
 - Sub-agents must NOT: commit, create PRs, update GitHub issues, modify files outside assigned scope
 
-## Executor ≠ Verifier
-- The agent that did the work never verifies its own output
-- After implementation, spawn a **separate verification agent** with fresh context (see the `verify` skill)
-- Verification agent reports structured results (PASS/PARTIAL/FAIL with evidence)
+## Executor ≠ Verifier — for delegated work only
+
+This rule exists because you cannot audit a sub-agent's diff from its own summary. It does
+not apply to work you did yourself.
+
+- **Work a sub-agent produced, heading for commit/PR** → spawn a fresh-context verifier
+  (see the `verify` skill). You did not watch it happen; its report is a claim, not evidence.
+  It reports PASS/PARTIAL/FAIL with evidence, and never modifies code.
+- **Work you did yourself** → no verifier. Run the project's gate inline, read the output,
+  move on. Don't re-run your own gate for ceremony, and don't spawn an agent to check your
+  own diff.
+- **Delegated work you can confirm in one command** (a one-line fix, a config edit, a doc
+  change) → just run the command. A verifier agent costs more than the check it performs.
 
 ## Finishing Beats Starting
 Always check for review/verification/blocked work before starting new tasks. Completing in-flight work has higher priority than spawning new work.
 
 ## Sub-Agent Spawn Template
+
+Hand over the **complete** specification in the spawn message and let the agent run to
+completion. A spawn that says "start on X and report back for direction" wastes the round
+trip — the agent will do better with the whole task than with the first third of it.
+
 ```
-## Inputs        — what the agent needs to start (file paths, context, existing patterns)
-## Deliverables  — what "done" looks like concretely
-## Verification  — how to confirm the work is correct (tests, lint, assertions)
-## Worktree      — path and branch (when using parallel agents)
-CRITICAL:        — one imperative sentence (the single most important constraint)
+## Objective     — one measurable sentence: what is true when this is done
+## Inputs        — absolute file paths, existing patterns to match, decisions already made
+## Deliverables  — every file to create/change and what each must contain
+## Non-goals     — what NOT to touch, refactor, rename, or "improve while in there"
+## Verification  — the exact commands that prove it works (proven to exist in this repo)
+## Worktree      — path and branch (required for any agent that writes files)
+## Model/effort  — set explicitly at spawn (see Routing); never inherit
+CRITICAL:        — one imperative sentence (the single hardest constraint)
 ```
 
-## Model Routing
-Choose the cheapest model that handles the task:
-- **haiku**: file lookups, simple searches, reading docs, quick research, status checks
-- **sonnet**: implementation, test writing, code review, documentation, most daily work (default)
-- **opus**: complex architecture decisions, large file refactors (700+ lines), multi-system reasoning
-- **fable**: main-loop only — never spawn a sub-agent on fable. If a subtask seems to need fable-level judgment, it isn't a subtask: handle it in the main session.
+Rules for composing it:
+- Resolve ambiguity **before** spawning. An unresolved question in the brief comes back as
+  a blocked agent or an invented answer.
+- Every value the agent must use verbatim (names, paths, magic numbers, signatures) goes
+  in the brief. Do not make it re-derive them.
+- Do not paste session history. The agent needs its task, the interfaces it touches, and
+  the constraints — nothing else.
+- Say "deliver exactly this scope; if you think the spec is wrong, say so in one sentence
+  and continue as specified." Opus 5 expands scope on its own otherwise.
+- Do not ask for progress check-ins. Ask for one final report.
 
-**Per-spawn, not per-agent.** These are choices you make at each spawn, via the Agent tool's `model` param — they override the sub-agent's frontmatter `model:`. A pinned `implementer: sonnet` is a *default, not a ceiling*: bump to opus for a genuinely hard step (debugging, edge cases, multi-system), drop to haiku for a trivial one. Set it explicitly at spawn; never let difficulty inherit the default.
+## Routing — effort is the primary lever, model is secondary
 
-**Cost as a lazy-router check.** If opus/fable spend climbs without the tasks actually getting harder, the router went lazy — check `/usage` (per-model breakdown) and re-justify each expensive spawn. A growing main-model bar means the orchestrator is executing instead of delegating. Over-routing is the default failure, not under-routing.
+Pick **effort** first: it is the main control on token cost and latency, and `low`/`medium`
+hold quality on most work. Only then pick the model. Reaching for a cheaper model to save
+cost, while leaving effort high, optimizes the wrong knob.
+
+| Task shape | model | effort |
+|---|---|---|
+| File lookup, grep, "where is X", status check | haiku | low |
+| Broad read-only sweep across many files | sonnet | low |
+| Docs/API lookup, summarizing a known source | haiku | low |
+| Single-file mechanical edit from a complete spec | sonnet | low |
+| Test writing against an existing pattern | sonnet | medium |
+| **Multi-file feature, refactor, end-to-end implementation** | **opus** | **medium** |
+| Review of a diff (first pass — report everything, filter after) | opus | low |
+| Debugging with an unknown root cause | opus | high |
+| Architecture / plan design / hard trade-off | opus | high |
+| The above, and a medium/high attempt already failed | opus | xhigh |
+| Orchestrator's own loop (triage, dispatch, bookkeeping) | session model | low–medium |
+
+`fable`: main-loop only — never spawn a sub-agent on fable. If a subtask seems to need
+fable-level judgment, it isn't a subtask: handle it in the main session.
+
+**Multi-file implementation goes to opus.** It is the strongest model available at exactly
+that shape of work. Routing it to sonnet to save money trades a real quality drop for a
+saving that dropping effort would have given you anyway.
+
+**Escalate effort, not model, first.** An agent that stalls or returns a shallow result at
+`medium` usually needs `high` on the same model, not a different model. Step to `xhigh`
+only for demanding agentic work that already failed at `high`.
+
+**Per-spawn, not per-agent.** Set `model` AND `effort` explicitly on every Agent call —
+they override the sub-agent's frontmatter. A pinned `implementer: sonnet, effort: medium`
+is a floor for trivial work, not a ceiling: a multi-file task spawned on that pin is
+mis-routed. In workflow scripts, the same two knobs are `opts.model` and `opts.effort`
+(`'low'|'medium'|'high'|'xhigh'|'max'`).
 
 ## Git Worktree Rules
 **Any sub-agent that writes files gets its own worktree — never spawn a writer into the shared checkout.** A writer in the shared checkout can switch branches or dirty the tree under the main session (and under other live sessions). Read-only agents (researcher, verifier) may share the checkout.
