@@ -5,7 +5,7 @@ description: Use when executing an implementation plan (a PLAN.md produced by tr
 
 # Implement — plan to verified PR (generic)
 
-Executes one triage plan end to end. Single writer: no parallel agents editing the same files. Done = verification gate green + acceptance checklist checked + independent PASS + PR open. Not before, not "mostly".
+Executes one triage plan end to end. Single writer: no parallel agents editing the same files. Done = verification gate green + acceptance checklist checked + independent PASS on delegated work + PR open. Not before, not "mostly".
 
 `method: implement/v1` — project repos may ship their own instantiation with parameters pre-baked (e.g. a project's own `skills/implement`). When the current repo has one, use it instead of this skill.
 
@@ -39,7 +39,9 @@ For each plan step:
 
 ## Phase 3 — independent verification (never self-verify)
 
-After the last step, get a fresh-context PASS before opening the PR: a verifier agent that did not write the code checks the diff against the plan's acceptance checklist through the full L1–L4 protocol in `agents/verifier.md` (gate re-run, exceptions audit, red-proof on new tests, adversarial + evidence review), per the `verify` skill's PASS/PARTIAL/FAIL format. PARTIAL/FAIL → back to Phase 2. The implementer's own test run is evidence, not a verdict.
+The diff was written by an agent that is not you, and it's heading to a PR — both reasons this phase exists. After the last step, get a fresh-context PASS before opening the PR: a verifier agent that did not write the code checks the diff against the plan's acceptance checklist per `agents/verifier.md` — L1 gate re-run, L2 exceptions audit, L3 red-proof on new tests, and L4 only if the change carries the risk L4 names. Report in the `verify` skill's PASS/PARTIAL/FAIL format. PARTIAL/FAIL → back to Phase 2. The implementer's own test run is evidence, not a verdict.
+
+If you implemented a step yourself in the main session instead of delegating it, that part of the diff needs no separate verification pass — your own gate run is the evidence for it.
 
 ## Phase 4 — the PR
 
@@ -53,4 +55,4 @@ After the last step, get a fresh-context PASS before opening the PR: a verifier 
 - "I'll commit everything at the end, cleaner history" → one step, one commit. Batch commits erase the audit trail the loop exists for.
 - "The test failures look unrelated" → prove it: diff failing lists against the unmodified base, or they're yours.
 - "Third attempt is nearly there, one more try" → 3 means 3. Record the blocker and report.
-- "I ran the tests, it's verified" → you wrote it; you don't get to be the verifier. Phase 3 is someone else.
+- "The implementer said the tests pass" → that's a claim, not a result. Phase 3 re-runs the gate on the diff someone else wrote. (If you wrote the step yourself, your own run stands — don't re-run it for ceremony.)
