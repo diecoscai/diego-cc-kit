@@ -10,7 +10,7 @@
     {
       "name": "diego-cc-kit",
       "description": "Personal orchestration kit: 6 sub-agents, triage/implement/orchestrate/verify/codegraph-usage skills, and safety hooks (bash-validator, style-check, session snapshots, worktree lifecycle).",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "author": {
         "name": "Diego Scai",
         "email": "diecoscai@gmail.com"
