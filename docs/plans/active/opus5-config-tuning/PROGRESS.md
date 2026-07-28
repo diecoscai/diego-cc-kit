@@ -28,7 +28,8 @@ Two independent chains — 1→2→3→4 and 5→6→7→8 — that can run in p
 
 ## Open
 
-- Task 7 Step 3 is the only genuinely unproven step: `opts.effort` is documented in the Workflow runtime contract, but this pipeline has never passed it. Smoke-test before considering Task 7 done.
+- ~~Task 7 Step 3 smoke test~~ — resolved, see log. `opts.effort` is accepted by the runtime.
+- **Restart Claude Code** to load diego-cc-kit 0.3.0. Until then the running process still holds the 0.2.0 skills, so the new delegation gates and verification scoping are installed but not live.
 - Superpowers' unqualified verification mandates are overridden by precedence, not removed. If the override stops holding in practice, the fix is a diego-cc-kit skill that supersedes `subagent-driven-development`.
 
 ## Log
