@@ -22,6 +22,12 @@ same file, it is one track — hand it to one agent, or do it yourself.
 Both gates pass → **one** agent. Only split into several when the tracks are so large
 that one agent would run out of room, not because splitting "feels parallel".
 
+**Split by scope, never by role.** One agent owns its track end-to-end: implement, test,
+clean, self-check. Do not build specialist pipelines (implementer → cleaner → hardener →
+reviewer as separate agents) — every handoff loses context and serializes the work, and
+the roles are an org chart, not a decomposition. The one legitimate role split is the
+fresh-context verifier, and only because its value IS the independence, not the specialty.
+
 **Caps (hard):**
 - Max **3** concurrent subagents. Reaching 3 is a signal to re-check Gate 2, not a target.
 - **4+ agents / TeamCreate**: only for pre-planned worktree-isolated tickets, and only
@@ -33,6 +39,22 @@ that one agent would run out of room, not because splitting "feels parallel".
 **Never delegate:** git operations, PR creation, GitHub issue updates, final integration,
 the decision of what to delegate.
 
+**Known control flow → script it, don't supervise it.** If the steps and their order are
+known before starting (fixed pipeline, fan-out over an enumerable list), the sequencing
+belongs in deterministic code — a Workflow script (only when the user opted into
+workflows) or a plain loop in the main session — with agents at the nodes. An agent
+deciding transitions that are already fixed adds nondeterminism exactly where you wanted
+none. Reserve agent judgment for steps whose outcome actually changes what happens next.
+
+A scripted pipeline needs its fail-path designed too, not just the happy path:
+- **On a step failure, resume at that step** with the failure context attached — never
+  restart the whole chain, never fall back to ad-hoc per-step judgment.
+- **Draft the terminal acceptance check before spawning stage 1.** A check written after
+  seeing the output tends to fit the output.
+- **Dry-run the chain on paper first**: for 2+ chained spawns, check each stage's output
+  contract against the next stage's Inputs before spawning stage 1. A gap found here
+  costs one sentence; found after stage 2 spawns, it costs a wasted agent.
+
 ## Responsibility Split
 - **Main session**: task decomposition, git operations (commit, push, PR), GitHub issue updates, final integration, verification coordination
 - **Sub-agents**: codebase exploration, implementation, test writing, documentation
@@ -42,6 +64,14 @@ the decision of what to delegate.
 
 This rule exists because you cannot audit a sub-agent's diff from its own summary. It does
 not apply to work you did yourself.
+
+The dominant sub-agent failure is not a crash or a timeout — it is plausible-wrong output
+delivered with a confident DONE. Two consequences:
+- **You design the check, not the agent.** The `## Verification` field in the brief is the
+  orchestrator's contribution: the property that must be true, chosen before spawning. An
+  agent left to pick its own check picks one its output passes.
+- **A report's narrative counts as nothing.** Only command output the agent pasted (or you
+  re-ran) is evidence. "Tests pass" without the test output is a claim, not a result.
 
 - **Work a sub-agent produced, heading for commit/PR** → spawn a fresh-context verifier
   (see the `verify` skill). You did not watch it happen; its report is a claim, not evidence.
@@ -54,6 +84,20 @@ not apply to work you did yourself.
 
 ## Finishing Beats Starting
 Always check for review/verification/blocked work before starting new tasks. Completing in-flight work has higher priority than spawning new work.
+
+A delegation round isn't finished until every spawned agent's report is collected — an
+agent id with no result is unobserved work, not done work.
+
+## Retry Policy — one different retry, then the user
+
+Applies to a verifier FAIL and to an agent that errors out or returns nothing (treat both
+as FAIL):
+
+- **Retry once, and the retry must differ.** Carry the failure evidence into the brief
+  (what failed, why) and/or escalate effort per Routing. An identical respawn is the same
+  coin flip — expect the same confident-wrong DONE.
+- **A second failure on the same task escalates to the user**, with both failure reports.
+  Not a third attempt, not a silently shrunken scope.
 
 ## Sub-Agent Spawn Template
 
@@ -82,6 +126,11 @@ Rules for composing it:
 - Say "deliver exactly this scope; if you think the spec is wrong, say so in one sentence
   and continue as specified." Opus 5 expands scope on its own otherwise.
 - Do not ask for progress check-ins. Ask for one final report.
+- Require the final report to account for every `## Deliverables` item — done / partial /
+  skipped, with the verification output for each. A bare DONE with no per-item accounting
+  is not a report; it is how 3-of-5 gets read as 5-of-5.
+- Tell the agent: on an ambiguity the brief doesn't resolve, stop and report the blocking
+  question instead of guessing — a wrong guess costs more than the round trip.
 
 ## Spawn Hygiene & Idle Recovery
 
