@@ -83,6 +83,39 @@ Rules for composing it:
   and continue as specified." Opus 5 expands scope on its own otherwise.
 - Do not ask for progress check-ins. Ask for one final report.
 
+## Spawn Hygiene & Idle Recovery
+
+Reglas duras de spawn — cada una evita un bug conocido del harness (anthropics/claude-code):
+
+- **No pasar `name` al Agent tool** salvo que necesites `SendMessage` con ese agente.
+  Con agent-teams activo, `name` cambia el spawn al protocolo teammate y el resultado
+  se pierde (llega como `idle_notification` vacío, nunca como `task-notification`) — #71723,
+  confirmado por mantenedores. Elegís: direccionabilidad O entrega confiable, no ambas.
+- **Prohibido `run_in_background: true` (Bash) dentro de un subagente.** Un subagente
+  in-process no tiene wake inlet: si cierra turno esperando la notificación, queda idle
+  para siempre mientras el resultado está en disco (#78782). Todo Bash de subagente es
+  foreground; si algo tarda >10 min, que el subagente haga polling de un archivo marcador
+  con deadline, nunca que espere una notificación.
+- **Un subagente en background no tiene el Agent tool.** No pedirle que delegue a su vez;
+  se ve como idle. Si la tarea necesita fan-out, el fan-out lo hace la sesión principal.
+- **`Monitor` dentro de un subagente no funciona** — el wake se descarta. Solo top-level.
+
+Protocolo de recuperación cuando un subagente queda idle sin reporte (en orden, parar
+en el primer paso que funcione):
+
+1. **Nudge 1**: `SendMessage` pidiendo el resultado.
+2. **Nudge 2** (el que suele funcionar — #87009): "Mandá tu reporte completo AHORA como
+   único mensaje." El agente casi siempre terminó; el reporte se perdió en el canal.
+3. **Leer el trabajo de disco**: `bash "${CLAUDE_PLUGIN_ROOT}"/scripts/subagent-diag.sh`
+   lista los subagentes de la sesión con tool calls y último mensaje. El transcript
+   completo está en `~/.claude/projects/<cwd-encoded>/<session-id>/subagents/agent-<id>.jsonl`.
+   Si el deliverable está ahí, usalo y matá al agente (`TaskStop`).
+4. **Re-despachar** solo si el JSONL muestra trabajo incompleto — y con el mismo brief,
+   nunca "continuá donde quedaste" (el agente nuevo no tiene el contexto del muerto).
+
+Nunca: reiniciar la sesión padre (no recupera nada), reintentar `SendMessage` en loop,
+ni re-despachar sin mirar el JSONL primero (el trabajo suele estar completo en disco).
+
 ## Routing — effort is the primary lever, model is secondary
 
 Pick **effort** first: it is the main control on token cost and latency, and `low`/`medium`
