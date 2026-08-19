@@ -25,6 +25,17 @@ check "solo whitespace bloquea" \
   "$(run '{"agent_id":"a4","last_assistant_message":"  \n "}')" 2
 check "JSON inválido pasa (fail-open)" \
   "$(run 'not-json')" 0
+check "agent_id degenerado sanitiza a vacío, pasa (1/3)" \
+  "$(run '{"agent_id":"//..","last_assistant_message":""}')" 0
+check "agent_id degenerado sanitiza a vacío, pasa (2/3)" \
+  "$(run '{"agent_id":"//..","last_assistant_message":""}')" 0
+check "agent_id degenerado sanitiza a vacío, pasa (3/3)" \
+  "$(run '{"agent_id":"//..","last_assistant_message":""}')" 0
 
-[ $fail -eq 0 ] && echo "OK: 7/7"
+run '{"agent_id":"a9","last_assistant_message":""}' >/dev/null 2>&1
+run '{"agent_id":"a9","last_assistant_message":"listo"}' >/dev/null 2>&1
+check "tras reportar, count file de a9 se borra" \
+  "$([ -e "$TMPDIR/claude-subagent-gate/a9" ] && echo exists || echo gone)" gone
+
+[ $fail -eq 0 ] && echo "OK: 9/9"
 exit $fail

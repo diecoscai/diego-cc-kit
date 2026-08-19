@@ -10,11 +10,18 @@ agent_id="$(jq -r '.agent_id // empty' <<<"$input" 2>/dev/null)" || exit 0
 [ -z "$agent_id" ] && exit 0   # fail-open: sin JSON válido no bloqueamos nada
 
 msg="$(jq -r '.last_assistant_message // ""' <<<"$input" 2>/dev/null | tr -d '[:space:]')"
-[ -n "$msg" ] && exit 0        # hay reporte: dejar parar
 
 dir="${TMPDIR:-/tmp}/claude-subagent-gate"
+safe_id="${agent_id//[^a-zA-Z0-9_-]/}"
+[ -z "$safe_id" ] && exit 0    # fail-open: agent_id sanitiza a vacío, no bloquear nunca
+count_file="$dir/$safe_id"
+
+if [ -n "$msg" ]; then
+  rm -f "$count_file"
+  exit 0                        # hay reporte: dejar parar
+fi
+
 mkdir -p "$dir"
-count_file="$dir/${agent_id//[^a-zA-Z0-9_-]/}"
 count=$(( $(cat "$count_file" 2>/dev/null || echo 0) + 1 ))
 echo "$count" >"$count_file"
 
