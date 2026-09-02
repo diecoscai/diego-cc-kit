@@ -175,6 +175,23 @@ out=$(printf '{"cwd":"%s","hook_event_name":"Stop"}' "$sg_repo" | "$hooks_dir/st
 status=$?
 [ "$status" -eq 0 ] && pass "stop-gate allows stop when the tree is clean" \
     || fail "stop-gate should exit 0 on a clean tree (got $status): $out"
+
+# --- stop-gate: untracked gate + otherwise clean tree → allows the stop ---
+git -C "$sg_repo" rm -q --cached .claude/gate
+git -C "$sg_repo" commit -q -m "untrack gate"
+out=$(printf '{"cwd":"%s","hook_event_name":"Stop"}' "$sg_repo" | "$hooks_dir/stop-gate.sh" 2>&1)
+status=$?
+[ "$status" -eq 0 ] && pass "stop-gate ignores an untracked gate file in the dirty check" \
+    || fail "stop-gate should exit 0 when only the gate itself is untracked (got $status): $out"
+
+# --- stop-gate: cwd in a subdirectory still finds the root gate ---
+mkdir -p "$sg_repo/sub"
+echo dirty > "$sg_repo/sub/file.txt"
+out=$(printf '{"cwd":"%s","hook_event_name":"Stop"}' "$sg_repo/sub" | "$hooks_dir/stop-gate.sh" 2>&1)
+status=$?
+[ "$status" -eq 2 ] && pass "stop-gate finds the root gate from a subdirectory cwd" \
+    || fail "stop-gate should exit 2 from a subdir with a dirty tree and a red gate (got $status): $out"
+
 rm -rf "$sg_repo"
 
 exit $failed
