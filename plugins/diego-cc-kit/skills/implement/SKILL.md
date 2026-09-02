@@ -23,19 +23,21 @@ There are no code-neutral exceptions: no "prep work", no "just the tests", no "I
 - Are the plan's claims still true on the current base branch? Plans go stale like issues do.
 - Does the change order respect dependencies?
 - Any `## Open questions` that block the steps you're about to execute → ask the user first.
+- Does the header carry a `goal:` line that a model could judge from command output alone? Missing or vague → write it now from the verification gate + acceptance checklist, log the correction in `PROGRESS.md`. Do not start Phase 2 without it.
 
 Gaps → fix the plan file, log the correction in `PROGRESS.md`, then execute the corrected plan. A fundamentally broken plan goes back to triage, not into improvisation.
 
 ## Phase 2 — execute (the loop)
 
-Execution is delegated: spawn `implementer` (or `fullstack-integrator` for cross-stack wiring) with an explicit `model` — sonnet by default, opus for a genuinely hard step (see `orchestrate`'s routing). Never let the spawn inherit the session model.
+Set the session goal first: `/goal <the plan's goal: line>`. From here a separate evaluator re-checks the condition after every turn, so the loop closes on evidence, not on "looks done". Execution is delegated: spawn `implementer` (or `fullstack-integrator` for cross-stack wiring) with an explicit `model` — sonnet by default, opus for a genuinely hard step (see `orchestrate`'s routing). Never let the spawn inherit the session model.
 
 For each plan step:
 1. Implement that step only.
 2. Run the plan's verification gate.
 3. Failures: fix and re-run. **Max 3 fix attempts per step** — then stop, record the exact error verbatim in `PROGRESS.md`, and report the blocker. Never weaken a test, an assertion, or an acceptance box to get past the gate.
 4. Pre-existing failures: diff the failing list against the unmodified base before claiming "pre-existing" — zero NEW failures is the bar, and the diff is your evidence.
-5. **Commit the step** (project's commit convention; reference the issue) and append a `PROGRESS.md` entry: step, status, evidence. One step = one commit = one progress entry — no batch commits at the end.
+5. UI change (anything a user sees): the step is not done until there is a screenshot of the running app (Chrome extension, `evidence-kit:capture-evidence`, or `/verify`) compared against the design or the previous state, with differences listed and fixed. This is independent of the verifier's L4: L4 is about risk; this is about closing the loop on something a test can't see.
+6. **Commit the step** (project's commit convention; reference the issue) and append a `PROGRESS.md` entry: step, status, evidence. One step = one commit = one progress entry — no batch commits at the end.
 
 ## Phase 3 — independent verification (never self-verify)
 
@@ -56,3 +58,4 @@ If you implemented a step yourself in the main session instead of delegating it,
 - "The test failures look unrelated" → prove it: diff failing lists against the unmodified base, or they're yours.
 - "Third attempt is nearly there, one more try" → 3 means 3. Record the blocker and report.
 - "The implementer said the tests pass" → that's a claim, not a result. Phase 3 re-runs the gate on the diff someone else wrote. (If you wrote the step yourself, your own run stands — don't re-run it for ceremony.)
+- "The component renders, tests pass, it's fine" → a test doesn't see layout. Screenshot, compare, then commit.
