@@ -13,8 +13,8 @@ Plan: `PLAN.md` (same directory). Spec: `~/dev/docs/research/agentic-workflows-r
 | 6 | Implement: `/goal` + UI evidence | kit | done (436168b) |
 | 7 | `stop-gate.sh` hook + tests + README | kit | done (aeef641 + fix 38176c8, 18/18 hook tests PASS) |
 | 8 | Bump 0.4.0 → push → update → restart | kit | done (c70abb4 on origin/main); restart pending Diego — this PC loads the kit via `--plugin-dir`, so `plugin update` is N/A here |
-| 9 | After `/context`, `/doctor`, Stop hook smoke | ~/.claude | pending |
-| 10 | `/update-dotfiles` capture | chezmoi | pending |
+| 9 | After `/context`, `/doctor`, Stop hook smoke | ~/.claude | pending Diego (needs restart) |
+| 10 | `/update-dotfiles` capture | chezmoi | done (dotfiles `d1bb8bc` on `chore/opus5-config-tuning`, not pushed) |
 
 ## Baseline
 
@@ -41,3 +41,4 @@ Plan: `PLAN.md` (same directory). Spec: `~/dev/docs/research/agentic-workflows-r
 - Ruling: I-3 fixed by rewording CLAUDE.md to "carries a `goal:` line in its header".
 - Ruling: minors — jq stderr silenced (trivial, included); stop_hook_active unchecked → parked, the harness's 8-block cap already bounds it; 600s timeout → parked, gate scripts are the repo's own test command; "gate = repo code execution" → parked, opt-in by design and same trust as running `npm test`; CLAUDE.md interview "unconditional" → parked, the line already scopes it to "feature or multi-file change with unknowns"; unlogged fixture deviation → already logged in PROGRESS.md.
 - Ruling: ONE fix dispatch (sonnet) then controller verifies the fix diff by test run + single read instead of a re-review agent (CLAUDE.md: skip the reviewer for diffs judgeable in one read). Cost if wrong: a missed regression in ~40 lines of bash that 18 tests cover.
+- **2026-09-02** — Task 10: captured CLAUDE.md, rules/react-ts.md, 17 tracked skills (flag line only), settings.json (only the env-var deletion ported by hand into the mac-era source; the rest of that file's drift is pre-existing and untouched), dot_zshrc.tmpl (alias already ported in Task 2). Left alone: `mcp-servers.reference.json`, `tennis-coach`, the `--plugin-dir` flags in the live `cc` alias (need template logic for the other PC), and the stray `~/CLAUDE.md` source-ahead entry.
