@@ -4,9 +4,9 @@
 
 **Goal:** Add the seven-mechanism learning layer on top of the triage→implement→verify pipeline so every plan passes through Diego's head at three cheap points (why / explain the diff / `/btw`), and repos in learn mode also hand him one slice to write, debug with hints, and feed a drill queue.
 
-goal: from `/home/dieco/dev/tools/diego-cc-kit`, `bash plugins/diego-cc-kit/hooks/tests/run.sh` exits 0 with no hook script modified, AND `grep -q '## Por qué' plugins/diego-cc-kit/skills/triage/SKILL.md && grep -q 'Tajada \[human\]' plugins/diego-cc-kit/skills/implement/SKILL.md && grep -q 'Concepts:' plugins/diego-cc-kit/agents/verifier.md && test -f plugins/diego-cc-kit/output-styles/aprender.md && test -f plugins/diego-cc-kit/skills/diego-cc-kit:drill/SKILL.md && [ "$(jq -r .version plugins/diego-cc-kit/.claude-plugin/plugin.json)" = 0.5.0 ]` exits 0, AND `grep -q '## Modos de trabajo' ~/.claude/CLAUDE.md`, AND every git repo under `~/dev/personal`, `~/dev/projects`, `~/dev/hobby` reports `outputStyle` = `aprender` from its `.claude/settings.local.json` while nothing under `~/dev/work` changes.
+goal: from `/home/dieco/dev/tools/diego-cc-kit`, `bash plugins/diego-cc-kit/hooks/tests/run.sh` exits 0 with no hook script modified, AND `grep -q '## Por qué' plugins/diego-cc-kit/skills/triage/SKILL.md && grep -q 'Tajada \[human\]' plugins/diego-cc-kit/skills/implement/SKILL.md && grep -q 'Concepts:' plugins/diego-cc-kit/agents/verifier.md && test -f plugins/diego-cc-kit/output-styles/aprender.md && test -f plugins/diego-cc-kit/skills/drill/SKILL.md && [ "$(jq -r .version plugins/diego-cc-kit/.claude-plugin/plugin.json)" = 0.5.0 ]` exits 0, AND `grep -q '## Modos de trabajo' ~/.claude/CLAUDE.md`, AND every git repo under `~/dev/personal`, `~/dev/projects`, `~/dev/hobby` reports `outputStyle` = `diego-cc-kit:aprender` from its `.claude/settings.local.json` while nothing under `~/dev/work` changes.
 
-**Architecture:** Two independent chains, like the previous plan. Chain B edits the kit (skill prose, one new skill, one new output style, README, bump to 0.5.0). Chain A edits `~/.claude/CLAUDE.md` and stamps `outputStyle` into the local settings of every personal/projects/hobby repo. The mode switch is one field: `outputStyle: "aprender"` in the repo's `.claude/settings.local.json`. That same field turns on the custom style for the main conversation and is what the kit skills read to decide learn vs deliver mode. No new hooks, no new scripts.
+**Architecture:** Two independent chains, like the previous plan. Chain B edits the kit (skill prose, one new skill, one new output style, README, bump to 0.5.0). Chain A edits `~/.claude/CLAUDE.md` and stamps `outputStyle` into the local settings of every personal/projects/hobby repo. The mode switch is one field: `outputStyle: "diego-cc-kit:aprender"` in the repo's `.claude/settings.local.json`. That same field turns on the custom style for the main conversation and is what the kit skills read to decide learn vs deliver mode. No new hooks, no new scripts.
 
 **Tech Stack:** Markdown instruction files, one output-style markdown shipped by the plugin (`output-styles/` is a supported plugin directory), `jq`, `bump.sh`, git, chezmoi.
 
@@ -47,12 +47,12 @@ goal: from `/home/dieco/dev/tools/diego-cc-kit`, `bash plugins/diego-cc-kit/hook
 - `plugins/diego-cc-kit/skills/implement/SKILL.md` — `defensa:` gate; `[human]` handover; PR `## Explanation`; `til.md` line
 - `plugins/diego-cc-kit/agents/verifier.md` and `skills/verify/SKILL.md` — concept tags on findings, `Concepts:` line
 - `plugins/diego-cc-kit/output-styles/aprender.md` — new
-- `plugins/diego-cc-kit/skills/diego-cc-kit:drill/SKILL.md` — new, user-invoked only
+- `plugins/diego-cc-kit/skills/drill/SKILL.md` — new, user-invoked only
 - `README.md`, `plugins/diego-cc-kit/.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json` — docs + bump
 
 **Chain A — `~/.claude` and repos (Tasks 7–8, then 9–10):**
 - `~/.claude/CLAUDE.md` — new `## Modos de trabajo` block after `## Planning gates`
-- `<repo>/.claude/settings.local.json` for every git repo under `~/dev/personal`, `~/dev/projects`, `~/dev/hobby` — `outputStyle: "aprender"`
+- `<repo>/.claude/settings.local.json` for every git repo under `~/dev/personal`, `~/dev/projects`, `~/dev/hobby` — `outputStyle: "diego-cc-kit:aprender"`
 
 ---
 
@@ -268,7 +268,7 @@ git commit -m "feat: aprender output style (hints, human slice, named concepts)"
 ### Task 5: The `/diego-cc-kit:drill` skill
 
 **Files:**
-- Create: `plugins/diego-cc-kit/skills/diego-cc-kit:drill/SKILL.md`
+- Create: `plugins/diego-cc-kit/skills/drill/SKILL.md`
 
 - [ ] **Step 1: Write the skill**
 
@@ -303,11 +303,11 @@ Reads `docs/agent/til.md` at the repo root (an argument overrides the path). TIL
 
 - [ ] **Step 2: Confirm and commit**
 
-Run: `grep -c 'disable-model-invocation: true' plugins/diego-cc-kit/skills/diego-cc-kit:drill/SKILL.md`
+Run: `grep -c 'disable-model-invocation: true' plugins/diego-cc-kit/skills/drill/SKILL.md`
 Expected: `1`
 
 ```bash
-git add plugins/diego-cc-kit/skills/diego-cc-kit:drill/SKILL.md
+git add plugins/diego-cc-kit/skills/drill/SKILL.md
 git commit -m "feat: /diego-cc-kit:drill spaced-recall skill"
 ```
 
