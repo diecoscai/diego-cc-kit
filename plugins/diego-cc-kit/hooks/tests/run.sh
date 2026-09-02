@@ -149,4 +149,32 @@ status=$?
     || fail "handoff-gate should exit 1 on an incomplete PROGRESS.md (got $status): $out"
 rm -rf "$hg_dir"
 
+# --- stop-gate: no .claude/gate → allows the stop ---
+sg_repo=$(mktemp -d)
+git -C "$sg_repo" init -q -b main
+git -C "$sg_repo" commit -q --allow-empty -m init
+out=$(printf '{"cwd":"%s","hook_event_name":"Stop"}' "$sg_repo" | "$hooks_dir/stop-gate.sh" 2>&1)
+status=$?
+[ "$status" -eq 0 ] && pass "stop-gate allows stop when no gate exists" \
+    || fail "stop-gate should exit 0 without a gate (got $status): $out"
+
+# --- stop-gate: failing gate + dirty tree → blocks the stop ---
+mkdir -p "$sg_repo/.claude"
+printf '#!/bin/bash\necho "1 test failed"\nexit 1\n' > "$sg_repo/.claude/gate"
+chmod +x "$sg_repo/.claude/gate"
+git -C "$sg_repo" add .claude/gate && git -C "$sg_repo" commit -q -m gate
+echo dirty > "$sg_repo/file.txt"
+out=$(printf '{"cwd":"%s","hook_event_name":"Stop"}' "$sg_repo" | "$hooks_dir/stop-gate.sh" 2>&1)
+status=$?
+[ "$status" -eq 2 ] && echo "$out" | grep -q "1 test failed" && pass "stop-gate blocks stop on a failing gate with a dirty tree" \
+    || fail "stop-gate should exit 2 with gate output (got $status): $out"
+
+# --- stop-gate: failing gate + clean tree → allows the stop ---
+rm "$sg_repo/file.txt"
+out=$(printf '{"cwd":"%s","hook_event_name":"Stop"}' "$sg_repo" | "$hooks_dir/stop-gate.sh" 2>&1)
+status=$?
+[ "$status" -eq 0 ] && pass "stop-gate allows stop when the tree is clean" \
+    || fail "stop-gate should exit 0 on a clean tree (got $status): $out"
+rm -rf "$sg_repo"
+
 exit $failed
