@@ -24,7 +24,7 @@ There are no code-neutral exceptions: no "prep work", no "just the tests", no "I
 - Does the change order respect dependencies?
 - Any `## Open questions` that block the steps you're about to execute → ask the user first.
 - Does the header carry a `goal:` line that a model could judge from command output alone? Missing or vague → write it now from the verification gate + acceptance checklist, log the correction in `PROGRESS.md`. Do not start Phase 2 without it.
-- Does `PROGRESS.md` carry a `defensa:` line answering the plan's `## Pregunta de defensa`? Missing → ask the user the question in chat now (free text, not `AskUserQuestion`), write `defensa: <their words>` into `PROGRESS.md`, then continue. Never write the answer yourself: it is the user's evidence of understanding, not a form field.
+- Does `PROGRESS.md` carry a `defensa:` line answering the plan's `## Pregunta de defensa`? Missing → ask the user the question in chat now (free text, not `AskUserQuestion`), write `defensa: <their words>` into `PROGRESS.md`, then continue. Never write the answer yourself: it is the user's evidence of understanding, not a form field. If no user is present (autonomous or `-p` run), write `defensa: pendiente` and continue; the PR then opens as draft.
 
 Gaps → fix the plan file, log the correction in `PROGRESS.md`, then execute the corrected plan. A fundamentally broken plan goes back to triage, not into improvisation.
 
@@ -32,7 +32,7 @@ Gaps → fix the plan file, log the correction in `PROGRESS.md`, then execute th
 
 Set the session goal first: `/goal <the plan's goal: line>`. From here a separate evaluator re-checks the condition after every turn, so the loop closes on evidence, not on "looks done". Execution is delegated: spawn `implementer` (or `fullstack-integrator` for cross-stack wiring) with an explicit `model` — sonnet by default, opus for a genuinely hard step (see `orchestrate`'s routing). Never let the spawn inherit the session model.
 
-Learn mode (`jq -r '.outputStyle // empty' .claude/settings.local.json` prints `aprender`) and the plan has a `## Tajada [human]` section: when the loop reaches that step, do not implement it and do not delegate it. Write a stub at the path the plan names containing only a `TODO(human)` comment that restates what the section asks for and the command that proves it, then stop and hand over in chat. The user writes it and commits it. Resume at the next step only when they say it's done and `git status --porcelain -- <path>` is clean. If the user says "hacelo vos", implement it, log `human slice skipped by user` in `PROGRESS.md`, and continue.
+Exception to "goal first" — learn mode (`jq -r '.outputStyle // empty' .claude/settings.local.json 2>/dev/null` prints `diego-cc-kit:aprender`) and the plan has a `## Tajada [human]` section: that step goes first, before `/goal` is set and before any delegation. Write a stub at the path the plan names containing only a `TODO(human)` comment that restates what the section asks for and the command that proves it, commit it (`chore: human slice stub — <path>`) so the tree is clean for the stop gate, then stop and hand over in chat. The user writes it and commits it. Only when they say it's done and the path is committed (`git status --porcelain -- <path>` prints nothing) set `/goal` and run the loop over the remaining steps. If the user says "hacelo vos", implement it, log `human slice skipped by user` in `PROGRESS.md`, and continue; if no user is present, log `human slice: pendiente` and do the same.
 
 For each plan step:
 1. Implement that step only.
@@ -52,8 +52,8 @@ If you implemented a step yourself in the main session instead of delegating it,
 
 - Target the branch the plan names; if the project has a release-branch flow, that flow wins over a default-branch PR.
 - Title per the project's convention; body references the issue, quotes the plan's `scope:` line, and includes verification output (gate results + verifier verdict).
-- Body carries `## Explicación` with the user's own three sentences: **qué cambia, por qué funciona, qué lo rompería**. Ask for them in chat before opening the PR and paste them verbatim. If the user can't give them, open the PR as **draft** with `## Explicación: pendiente` and say so in the report. A PR its author can't explain isn't ready; that is knowledge debt, not a formality.
-- Learn mode: after the PR exists, append one line to `docs/agent/til.md` (create it with a `# TIL` header if missing) in the form `- YYYY-MM-DD · <concept, the plan's patrón:> · <one sentence on what you'd tell a colleague> · <PR url>`, add `- [TIL](til.md) — conceptos por PR, insumo de /drill` to `docs/agent/README.md` if that line is absent, and commit both on the branch with `docs: til <concept>`.
+- Body carries `## Explanation` with the user's own three sentences, in the PR's language: **what changes, why it works, what would break it**. Ask for them in chat before opening the PR and paste them verbatim. If the user can't give them, or no user is present, open the PR as **draft** with `## Explanation: pending` and say so in the report. A PR its author can't explain isn't ready; that is knowledge debt, not a formality.
+- Learn mode: after the PR exists, append one line to `docs/agent/til.md` (create it with a `# TIL` header if missing) in the form `- YYYY-MM-DD · <concept, the plan's patrón:> · <one sentence on what you'd tell a colleague> · <PR url>` (date from `date +%F`), add `- [TIL](til.md) — conceptos por PR, insumo de /diego-cc-kit:drill` to `docs/agent/README.md` if that line is absent, and commit both on the branch with `docs: til <concept>`.
 - Do not merge. Acceptance stays human-owned.
 
 ## Red flags

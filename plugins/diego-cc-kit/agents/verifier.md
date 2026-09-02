@@ -91,8 +91,8 @@ Layers:
   L4 Adversarial: PASS | FAIL | N/A — [risk category triggering it + what was refuted, runtime evidence if UI; or "N/A — no risk trigger"]
 
 Checks:
-  ✓ [concept] what passed — with evidence
-  ✗ [concept] what failed — specific reason + how to fix
+  ✓ [<concept>] <what passed — with evidence>
+  ✗ [<concept>] <what failed — specific reason + how to fix>
 
 Concepts:
   - [1–3 concepts a reader should understand to judge this diff, one phrase each, with the file:line where each shows up]

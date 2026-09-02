@@ -4,7 +4,7 @@
 
 **Goal:** Add the seven-mechanism learning layer on top of the triage→implement→verify pipeline so every plan passes through Diego's head at three cheap points (why / explain the diff / `/btw`), and repos in learn mode also hand him one slice to write, debug with hints, and feed a drill queue.
 
-goal: from `/home/dieco/dev/tools/diego-cc-kit`, `bash plugins/diego-cc-kit/hooks/tests/run.sh` exits 0 with no hook script modified, AND `grep -q '## Por qué' plugins/diego-cc-kit/skills/triage/SKILL.md && grep -q 'Tajada \[human\]' plugins/diego-cc-kit/skills/implement/SKILL.md && grep -q 'Concepts:' plugins/diego-cc-kit/agents/verifier.md && test -f plugins/diego-cc-kit/output-styles/aprender.md && test -f plugins/diego-cc-kit/skills/drill/SKILL.md && [ "$(jq -r .version plugins/diego-cc-kit/.claude-plugin/plugin.json)" = 0.5.0 ]` exits 0, AND `grep -q '## Modos de trabajo' ~/.claude/CLAUDE.md`, AND every git repo under `~/dev/personal`, `~/dev/projects`, `~/dev/hobby` reports `outputStyle` = `aprender` from its `.claude/settings.local.json` while nothing under `~/dev/work` changes.
+goal: from `/home/dieco/dev/tools/diego-cc-kit`, `bash plugins/diego-cc-kit/hooks/tests/run.sh` exits 0 with no hook script modified, AND `grep -q '## Por qué' plugins/diego-cc-kit/skills/triage/SKILL.md && grep -q 'Tajada \[human\]' plugins/diego-cc-kit/skills/implement/SKILL.md && grep -q 'Concepts:' plugins/diego-cc-kit/agents/verifier.md && test -f plugins/diego-cc-kit/output-styles/aprender.md && test -f plugins/diego-cc-kit/skills/diego-cc-kit:drill/SKILL.md && [ "$(jq -r .version plugins/diego-cc-kit/.claude-plugin/plugin.json)" = 0.5.0 ]` exits 0, AND `grep -q '## Modos de trabajo' ~/.claude/CLAUDE.md`, AND every git repo under `~/dev/personal`, `~/dev/projects`, `~/dev/hobby` reports `outputStyle` = `aprender` from its `.claude/settings.local.json` while nothing under `~/dev/work` changes.
 
 **Architecture:** Two independent chains, like the previous plan. Chain B edits the kit (skill prose, one new skill, one new output style, README, bump to 0.5.0). Chain A edits `~/.claude/CLAUDE.md` and stamps `outputStyle` into the local settings of every personal/projects/hobby repo. The mode switch is one field: `outputStyle: "aprender"` in the repo's `.claude/settings.local.json`. That same field turns on the custom style for the main conversation and is what the kit skills read to decide learn vs deliver mode. No new hooks, no new scripts.
 
@@ -15,12 +15,17 @@ goal: from `/home/dieco/dev/tools/diego-cc-kit`, `bash plugins/diego-cc-kit/hook
 ## Decisions taken while planning (read these before saying "1")
 
 1. **One custom style, not two.** The spec names `Learning` (for the `[human]` slice) and a separate `pistas` style (for hints). Only one `outputStyle` can be active, so this plan ships one style, `aprender`, that does both, with `keep-coding-instructions: true`. Built-in `Learning` stays available from `/config` if you ever prefer it.
-2. **Mode = the settings field, not the folder.** Skills detect learn mode with `jq -r '.outputStyle // empty' .claude/settings.local.json` printing `aprender`. The folder rule (personal/projects/hobby = learn, work = deliver) is how the field gets stamped in Task 8; it isn't re-derived by the skills, so it works the same on the other PC and in a repo you move.
+2. **Mode = the settings field, not the folder.** Skills detect learn mode with `jq -r '.outputStyle // empty' .claude/settings.local.json` printing `diego-cc-kit:aprender`. The folder rule (personal/projects/hobby = learn, work = deliver) is how the field gets stamped in Task 8; it isn't re-derived by the skills, so it works the same on the other PC and in a repo you move.
 3. **Mechanism 4 (hints before fixes) lives only in the output style.** It covers bugs you bring to the main conversation. The `implement` gate loop (an implementer subagent fixing its own red gate) is unchanged: subagents don't see output styles, and that loop isn't the "iterative AI debugging" the study warns about, because you never touch it.
 4. **The defense answer is a gate, in both modes.** `implement` refuses to start until `PROGRESS.md` carries `defensa:` with your answer. It asks you in chat if it's missing; it never writes the answer itself.
 5. **The PR explanation is a gate, in both modes.** Missing three sentences → the PR opens as a draft with `pendiente`, never as ready.
-6. **Mechanism 7 (monthly walkthrough, feature without agent) is not config.** The only trace is one reminder line at the end of `/drill` when no `walkthrough` entry exists in the last 30 days. Calendar is yours.
+6. **Mechanism 7 (monthly walkthrough, feature without agent) is not config.** The only trace is one reminder line at the end of `/diego-cc-kit:drill` when no `walkthrough` entry exists in the last 30 days. Calendar is yours.
 7. **`til.md` lives in `docs/agent/`**, per your "Dónde va el conocimiento" rule, indexed from that folder's `README.md`. Deliver-mode repos (work/) get no `til.md`, because nothing versioned goes into company repos.
+
+## Post-review corrections (2026-09-02)
+
+- Plugin output styles are registered as `<plugin>:<name>` (verified with `claude -p --settings`): the setting value is `diego-cc-kit:aprender` everywhere; the file stays `output-styles/aprender.md`.
+- Skills are invoked as `/diego-cc-kit:drill`. The PR section is `## Explanation` (English, colleagues read work PRs). Both gates have a no-user fallback (`pendiente` + draft PR). The human slice runs first, committed as a stub, before `/goal`.
 
 ## Global Constraints
 
@@ -39,10 +44,10 @@ goal: from `/home/dieco/dev/tools/diego-cc-kit`, `bash plugins/diego-cc-kit/hook
 
 **Chain B — kit repo `/home/dieco/dev/tools/diego-cc-kit`, branch `feat/learning-layer` in worktree `../wt-learning-layer` (Tasks 1–6):**
 - `plugins/diego-cc-kit/skills/triage/SKILL.md` — mode detection; `## Por qué`, `## Pregunta de defensa`, `## Tajada [human]` in the plan contract; red flags
-- `plugins/diego-cc-kit/skills/implement/SKILL.md` — `defensa:` gate; `[human]` handover; PR `## Explicación`; `til.md` line
+- `plugins/diego-cc-kit/skills/implement/SKILL.md` — `defensa:` gate; `[human]` handover; PR `## Explanation`; `til.md` line
 - `plugins/diego-cc-kit/agents/verifier.md` and `skills/verify/SKILL.md` — concept tags on findings, `Concepts:` line
 - `plugins/diego-cc-kit/output-styles/aprender.md` — new
-- `plugins/diego-cc-kit/skills/drill/SKILL.md` — new, user-invoked only
+- `plugins/diego-cc-kit/skills/diego-cc-kit:drill/SKILL.md` — new, user-invoked only
 - `README.md`, `plugins/diego-cc-kit/.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json` — docs + bump
 
 **Chain A — `~/.claude` and repos (Tasks 7–8, then 9–10):**
@@ -71,7 +76,7 @@ with:
 
 ```
 4. Classify scope (above).
-5. Detect the mode. At the repo root run `jq -r '.outputStyle // empty' .claude/settings.local.json 2>/dev/null`. Output `aprender` → **learn mode**: the plan carries a `## Tajada [human]` section. Anything else (empty, `Default`, missing file) → **deliver mode**: omit that section. Everything else in the contract applies to both modes.
+5. Detect the mode. At the repo root run `jq -r '.outputStyle // empty' .claude/settings.local.json 2>/dev/null`. Output `diego-cc-kit:aprender` → **learn mode**: the plan carries a `## Tajada [human]` section. Anything else (empty, `Default`, missing file) → **deliver mode**: omit that section. Everything else in the contract applies to both modes.
 6. Write the plan files (contract below).
 7. If the project's workflow posts plans to the tracker (issue comment, ticket), do so.
 8. Hand the plan to the user to read before anything executes. They read it and answer the `## Pregunta de defensa` in chat; write their answer into `PROGRESS.md` as one line, `defensa: <their words>`, verbatim. Never write that answer yourself, and never start `implement` without it. The plan is the leverage point; the implementation is not.
@@ -127,7 +132,7 @@ In `## Phase 1 — validate the plan`, after the bullet that begins `- Does the 
 In `## Phase 2 — execute (the loop)`, after the paragraph that ends `Never let the spawn inherit the session model.`, add a paragraph:
 
 ```
-Learn mode (`jq -r '.outputStyle // empty' .claude/settings.local.json` prints `aprender`) and the plan has a `## Tajada [human]` section: when the loop reaches that step, do not implement it and do not delegate it. Write a stub at the path the plan names containing only a `TODO(human)` comment that restates what the section asks for and the command that proves it, then stop and hand over in chat. The user writes it and commits it. Resume at the next step only when they say it's done and `git status --porcelain -- <path>` is clean. If the user says "hacelo vos", implement it, log `human slice skipped by user` in `PROGRESS.md`, and continue.
+Learn mode (`jq -r '.outputStyle // empty' .claude/settings.local.json` prints `diego-cc-kit:aprender`) and the plan has a `## Tajada [human]` section: when the loop reaches that step, do not implement it and do not delegate it. Write a stub at the path the plan names containing only a `TODO(human)` comment that restates what the section asks for and the command that proves it, then stop and hand over in chat. The user writes it and commits it. Resume at the next step only when they say it's done and `git status --porcelain -- <path>` is clean. If the user says "hacelo vos", implement it, log `human slice skipped by user` in `PROGRESS.md`, and continue.
 ```
 
 - [ ] **Step 3: Phase 4 explanation gate and TIL line**
@@ -137,8 +142,8 @@ Replace the `## Phase 4 — the PR` bullet list with:
 ```
 - Target the branch the plan names; if the project has a release-branch flow, that flow wins over a default-branch PR.
 - Title per the project's convention; body references the issue, quotes the plan's `scope:` line, and includes verification output (gate results + verifier verdict).
-- Body carries `## Explicación` with the user's own three sentences: **qué cambia, por qué funciona, qué lo rompería**. Ask for them in chat before opening the PR and paste them verbatim. If the user can't give them, open the PR as **draft** with `## Explicación: pendiente` and say so in the report. A PR its author can't explain isn't ready; that is knowledge debt, not a formality.
-- Learn mode: after the PR exists, append one line to `docs/agent/til.md` (create it with a `# TIL` header if missing) in the form `- YYYY-MM-DD · <concept, the plan's patrón:> · <one sentence on what you'd tell a colleague> · <PR url>`, add `- [TIL](til.md) — conceptos por PR, insumo de /drill` to `docs/agent/README.md` if that line is absent, and commit both on the branch with `docs: til <concept>`.
+- Body carries `## Explanation` with the user's own three sentences: **qué cambia, por qué funciona, qué lo rompería**. Ask for them in chat before opening the PR and paste them verbatim. If the user can't give them, open the PR as **draft** with `## Explanation: pending` and say so in the report. A PR its author can't explain isn't ready; that is knowledge debt, not a formality.
+- Learn mode: after the PR exists, append one line to `docs/agent/til.md` (create it with a `# TIL` header if missing) in the form `- YYYY-MM-DD · <concept, the plan's patrón:> · <one sentence on what you'd tell a colleague> · <PR url>`, add `- [TIL](til.md) — conceptos por PR, insumo de /diego-cc-kit:drill` to `docs/agent/README.md` if that line is absent, and commit both on the branch with `docs: til <concept>`.
 - Do not merge. Acceptance stays human-owned.
 ```
 
@@ -260,10 +265,10 @@ git commit -m "feat: aprender output style (hints, human slice, named concepts)"
 
 ---
 
-### Task 5: The `/drill` skill
+### Task 5: The `/diego-cc-kit:drill` skill
 
 **Files:**
-- Create: `plugins/diego-cc-kit/skills/drill/SKILL.md`
+- Create: `plugins/diego-cc-kit/skills/diego-cc-kit:drill/SKILL.md`
 
 - [ ] **Step 1: Write the skill**
 
@@ -298,12 +303,12 @@ Reads `docs/agent/til.md` at the repo root (an argument overrides the path). TIL
 
 - [ ] **Step 2: Confirm and commit**
 
-Run: `grep -c 'disable-model-invocation: true' plugins/diego-cc-kit/skills/drill/SKILL.md`
+Run: `grep -c 'disable-model-invocation: true' plugins/diego-cc-kit/skills/diego-cc-kit:drill/SKILL.md`
 Expected: `1`
 
 ```bash
-git add plugins/diego-cc-kit/skills/drill/SKILL.md
-git commit -m "feat: /drill spaced-recall skill"
+git add plugins/diego-cc-kit/skills/diego-cc-kit:drill/SKILL.md
+git commit -m "feat: /diego-cc-kit:drill spaced-recall skill"
 ```
 
 ---
@@ -325,7 +330,7 @@ Replace the `- **skills/**` line with:
 After the `- **hooks/**` line add:
 
 ```
-- **output-styles/** — `aprender`: set `"outputStyle": "aprender"` in a repo's `.claude/settings.local.json` and the main conversation debugs with hints (max three) before fixing, leaves one `TODO(human)` slice per task, and names the pattern it uses. The same field is what `triage`/`implement` read to enter learn mode; leave it unset in repos where you only deliver.
+- **output-styles/** — `aprender`: set `"outputStyle": "diego-cc-kit:aprender"` in a repo's `.claude/settings.local.json` and the main conversation debugs with hints (max three) before fixing, leaves one `TODO(human)` slice per task, and names the pattern it uses. The same field is what `triage`/`implement` read to enter learn mode; leave it unset in repos where you only deliver.
 ```
 
 - [ ] **Step 2: Hook tests still green**
@@ -358,12 +363,12 @@ Confirm: `jq -r .version plugins/diego-cc-kit/.claude-plugin/plugin.json` → `0
 ## Modos de trabajo
 - Dos modos por repo, elegidos por `outputStyle` en `.claude/settings.local.json`: `aprender` (personal/, projects/, hobby/) o ausente = **entregar** (work/). Los skills del kit leen ese campo; no lo deduzcas de la carpeta.
 - Siempre: el plan trae `## Por qué` y una pregunta de defensa que respondo yo antes de aprobarlo (`defensa:` en PROGRESS.md); el PR lleva mi explicación del diff en tres oraciones o queda en draft; un término que no podría explicar va a `/btw ¿qué es X y cuándo NO usarlo?`.
-- Solo en aprender: una tajada `[human]` por plan la escribo yo; los bugs que traigo al hilo se debuggean con pistas (máx. 3) antes del fix; cada plan cerrado deja una línea en `docs/agent/til.md` y `/drill` la repasa una vez por semana.
+- Solo en aprender: una tajada `[human]` por plan la escribo yo; los bugs que traigo al hilo se debuggean con pistas (máx. 3) antes del fix; cada plan cerrado deja una línea en `docs/agent/til.md` y `/diego-cc-kit:drill` la repasa una vez por semana.
 ```
 
 - [ ] **Step 2: Confirm**
 
-Run: `grep -c '## Modos de trabajo\|defensa:\|/drill' ~/.claude/CLAUDE.md && wc -l ~/.claude/CLAUDE.md`
+Run: `grep -c '## Modos de trabajo\|defensa:\|/diego-cc-kit:drill' ~/.claude/CLAUDE.md && wc -l ~/.claude/CLAUDE.md`
 Expected: `3` and 85 lines (81 + 4)
 
 ---
@@ -381,7 +386,7 @@ for d in ~/dev/personal/* ~/dev/projects/* ~/dev/hobby/*; do
   f="$d/.claude/settings.local.json"
   mkdir -p "$d/.claude"
   [ -f "$f" ] || echo '{}' > "$f"
-  tmp=$(mktemp) && jq '.outputStyle = "aprender"' "$f" > "$tmp" && mv "$tmp" "$f"
+  tmp=$(mktemp) && jq '.outputStyle = "diego-cc-kit:aprender"' "$f" > "$tmp" && mv "$tmp" "$f"
   git -C "$d" check-ignore -q .claude/settings.local.json \
     || echo ".claude/settings.local.json" >> "$(git -C "$d" rev-parse --git-path info/exclude)"
   echo "$d"
@@ -399,17 +404,17 @@ for d in ~/dev/personal/* ~/dev/projects/* ~/dev/hobby/*; do
 done | sort | uniq -c
 git -C ~/dev/work/aai status --porcelain -- .claude | wc -l
 ```
-Expected: one line, `N aprender` where N = number of repos printed in Step 1 (27 dirs listed today; the count is whatever has a `.git`); second command prints `0`.
+Expected: one line, `N diego-cc-kit:aprender` where N = number of repos printed in Step 1 (27 dirs listed today; the count is whatever has a `.git`); second command prints `0`.
 
 ---
 
 ### Task 9: Diego, next session (interactive)
 
 - [ ] Restart Claude Code (kit 0.5.0 is live via `--plugin-dir`; other PC: `claude plugin marketplace update diego-cc-kit && claude plugin update diego-cc-kit@diego-cc-kit`).
-- [ ] In a personal repo, `/config` → Output style shows `aprender` selected. Paste a fake stack trace: the reply asks for your hypothesis instead of fixing.
+- [ ] In a personal repo, `/config` → Output style shows `diego-cc-kit:aprender` selected. Paste a fake stack trace: the reply asks for your hypothesis instead of fixing.
 - [ ] `/context`: the `aprender` style adds system-prompt text; note the delta against the 0.4.0 baseline in `PROGRESS.md`.
 - [ ] Run `diego-cc-kit:triage` on one small real issue in that repo: the plan has `## Por qué`, `## Pregunta de defensa`, `## Tajada [human]`; you answer; `implement` stops at the slice.
-- [ ] After the first PR lands, `docs/agent/til.md` has one line; a week later, `/drill`.
+- [ ] After the first PR lands, `docs/agent/til.md` has one line; a week later, `/diego-cc-kit:drill`.
 - [ ] Deliver-mode check: in `~/dev/work/aai`, triage a small issue; no `## Tajada [human]`, but `## Por qué` and the defense question are there.
 
 ---
@@ -423,7 +428,7 @@ Expected: one line, `N aprender` where N = number of repos printed in Step 1 (27
 ## Non-goals
 
 - No hook enforces the defense answer, the explanation, or the TIL line. Prose gates in skills are enough for a first iteration; a hook comes if a gate is skipped twice (the kit's own steering rule).
-- No `til.md` or drill in `work/` repos (nothing versioned in company repos). If wanted later, `~/dev/work/aai/knowledge/<proyecto>/til.md` is the place and `/drill <path>` already accepts it.
+- No `til.md` or drill in `work/` repos (nothing versioned in company repos). If wanted later, `~/dev/work/aai/knowledge/<proyecto>/til.md` is the place and `/diego-cc-kit:drill <path>` already accepts it.
 - No change to `implement`'s gate-failure loop, to subagent prompts, or to the built-in `Learning` style.
 - No calendar automation for mechanism 7.
 
