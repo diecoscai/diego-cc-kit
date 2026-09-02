@@ -33,6 +33,8 @@ stop, not a PASS.
 Every layer here exists to test a claim made by someone else. None of them is a second
 opinion on your own work.
 
+Every finding carries a concept tag (`[race condition]`, `[N+1]`, `[validation at the boundary]`) and the report carries a `Concepts:` list. A review only teaches if it names the class of mistake, not only the line.
+
 **Always, across the boundary:**
 
 1. **L1 Gate re-run** — the implementer's "tests pass" is text until you run the gate. One
