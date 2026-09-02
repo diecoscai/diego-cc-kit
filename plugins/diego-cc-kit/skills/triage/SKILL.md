@@ -30,16 +30,18 @@ If the repo carries a scope-governance doc (SOW, contract, roadmap, milestone pl
 
 1. Read the issue/request and everything linked (comments, PRs, referenced code).
 2. Verify its claims against the current code — issues go stale; record what you confirmed vs corrected.
-3. Classify scope (above).
-4. Write the plan files (contract below).
-5. If the project's workflow posts plans to the tracker (issue comment, ticket), do so.
+3. **Interview before designing (features and anything with unknowns; skip for a bug with a reproducible symptom).** Use `AskUserQuestion` in rounds until nothing material is left: technical approach, edge cases, UI/UX, out-of-scope, and explicitly "how could this fail?" (the failure modes of the mechanism you are about to depend on). Do not ask what the code already answers. Answers go into the plan as `## Verified facts` and `## Non-goals`, not into a separate transcript.
+4. Classify scope (above).
+5. Write the plan files (contract below).
+6. If the project's workflow posts plans to the tracker (issue comment, ticket), do so.
+7. Hand the plan to the user to read before anything executes. The plan is the leverage point; the implementation is not.
 
 ## Plan contract
 
 Write to the project's plan location (discovered or asked; suggest `docs/plans/active/<slug>/` if the user has no preference):
 
 **`PLAN.md`** — these sections, in order:
-- Header: `scope:` / `scope-evidence:` / `scope-ack:` / `branch:` (off the discovered target)
+- Header: `scope:` / `scope-evidence:` / `scope-ack:` / `branch:` (off the discovered target) / `goal:` — one verifiable end state in a single sentence, naming the command that proves it and any constraint that must hold on the way (e.g. `goal: `npm test` and `npm run lint` exit 0 with the three acceptance boxes checked; no test file outside src/auth is modified`). `implement` runs the whole plan under `/goal <this line>`; if it can't be judged from command output in the transcript, it isn't a goal, rewrite it.
 - `## Objective` — 1 sentence, measurable
 - `## Verified facts` — issue claims vs code
 - `## Files to touch` — paths, in change order
@@ -59,3 +61,5 @@ Ambiguity or missing info: list it explicitly instead of guessing. Don't redesig
 - "I'll just put the plan somewhere sensible" → discovered convention, or ask, or `## Open questions` — inventing paths silently is the failure mode.
 - "This repo has no governance doc, skip the scope section" → the explicit `scope: none` line IS the section.
 - "The issue explains itself, skip claim verification" → issues go stale; verify against code and say what you checked.
+- "The request is clear enough, skip the interview" → for a feature, the unknowns you didn't ask about become the implementer's guesses. Interview; it costs minutes.
+- "goal: implement the feature" → not judgeable from a transcript. A goal names a command and an exit state.
