@@ -100,7 +100,7 @@ Append to `## Red flags`:
 - [ ] **Step 4: Confirm and commit**
 
 Run: `grep -c '## Por qué\|## Pregunta de defensa\|## Tajada \[human\]\|Detect the mode' plugins/diego-cc-kit/skills/triage/SKILL.md`
-Expected: `6` (three contract bullets, the mode step, and two mentions in procedure steps 5 and 8)
+Expected: `5` (three contract bullets, procedure step 5, procedure step 8)
 
 ```bash
 git add plugins/diego-cc-kit/skills/triage/SKILL.md
